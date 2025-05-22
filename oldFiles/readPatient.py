@@ -18,7 +18,7 @@ class ClinicalRecordReader:
     def __init__(self):
         """Inicializa la conexión a MongoDB"""
         self.uri = os.getenv("MONGO_URI")
-        self.db_name = os.getenv("DB_NAME", "SamplePatientService")
+        self.db_name = os.getenv("DB_NAME", "SampleInformationtService")
         self.client = MongoClient(self.uri, server_api=ServerApi('1'))
         self.db = self.client[self.db_name]
         
