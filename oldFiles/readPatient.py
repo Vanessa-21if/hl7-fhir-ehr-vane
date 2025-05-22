@@ -9,8 +9,7 @@ import os
 from fhir.resources.patient import Patient
 from fhir.resources.medicationdispense import MedicationDispense
 from pydantic import ValidationError
-
-load_dotenv()
+from connection import connect_to_mongodb  
 
 class ClinicalRecordReader:
     """Sistema de lectura para historia clínica electrónica que cumple con la historia de usuario"""
