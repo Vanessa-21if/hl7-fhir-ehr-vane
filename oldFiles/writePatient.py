@@ -8,6 +8,8 @@ from fhir.resources.medicationdispense import MedicationDispense
 from pydantic import ValidationError
 import os
 from dotenv import load_dotenv
+from src.connection import connect_to_mongodb  
+
 
 load_dotenv()
 
