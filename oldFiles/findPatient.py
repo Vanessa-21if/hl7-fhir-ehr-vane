@@ -7,13 +7,13 @@ from connection import connect_to_mongodb
 
 class MongoDBConnector:
     
-    def connect_to_mongo_db():
+    def __init__(self, uri: str, db_name: str):
+        
+            def connect_to_mongo_db():
     load_dotenv()
     mongodb_uri = os.getenv('MONGO_URI')
     client = MongoClient(mongodb_uri)
     return client
-    
-    def __init__(self, uri: str, db_name: str):
          
         self.client = MongoClient(uri, server_api=ServerApi('1'))
         self.db = self.client[db_name]
