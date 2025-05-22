@@ -9,10 +9,7 @@ def connect_to_mongo_db():
     mongodb_uri = os.getenv('MONGO_URI')
     client = MongoClient(mongodb_uri)
     return client
-    MONGO_URI="mongodb+srv://21vanessaaa:VANEifmer2025@sampleinformationservic.ceivw.mongodb.net/?retryWrites=true&w=majority&appName=SampleInformationService"
-    API_PORT=8000
-    ALLOWED_ORIGINS="https://hl7-patient-write-vanessa.onrender.com,http://localhost:3000"
-
+   
 def get_db_connection():
     """Establece conexión a la base de datos"""
     client = MongoClient(os.getenv("MONGO_URI"))
