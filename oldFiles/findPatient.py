@@ -5,7 +5,6 @@ from datetime import datetime
 from bson import ObjectId
 
 class MongoDBConnector:
-    """Clase mejorada para manejar conexiones a MongoDB con dos colecciones"""
     
     def __init__(self, uri: str, db_name: str):
         """
