@@ -13,13 +13,14 @@ load_dotenv()
 
 class ClinicalRecordSystem:
     """Sistema de registro clínico para cumplir la historia de usuario"""
-    def connect_to_mongo_db():
-    load_dotenv()
-    mongodb_uri = os.getenv('MONGO_URI')
-    client = MongoClient(mongodb_uri)
-    return client
+
     def __init__(self):
         """Inicializa conexión a MongoDB"""
+            def connect_to_mongo_db():
+            load_dotenv()
+            mongodb_uri = os.getenv('MONGO_URI')
+            client = MongoClient(mongodb_uri)
+            return client
         self.uri = os.getenv("MONGO_URI")
         self.db_name = os.getenv("DB_NAME", "SamplePatientService")
         self.client = MongoClient(self.uri, server_api=ServerApi('1'))
