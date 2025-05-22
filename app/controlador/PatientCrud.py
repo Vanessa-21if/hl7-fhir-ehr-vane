@@ -1,101 +1,101 @@
 from connection import connect_to_mongodb
 from bson import ObjectId
-from fhir.resources.patient import Patient
-from fhir.resources.medicationdispense import MedicationDispense
+from fhir.resources.patients import patients
+from fhir.resources.medicationsdispense import medicationsDispense
 from datetime import datetime
 import json
 
 # Conexión a colecciones
-patient_collection = connect_to_mongodb("SamplePatientService", "patients")
-medication_collection = connect_to_mongodb("SamplePatientService", "medications")
+patients_collection = connect_to_mongodb("SampleInformationService", "patientss")
+medications_collection = connect_to_mongodb("SampleInformationService", "medicationss")
 
-def GetPatientById(patient_id: str):
+def GetpatientsById(patients_id: str):
     """Obtiene un paciente por su ID"""
     try:
-        patient = patient_collection.find_one({"_id": ObjectId(patient_id)})
-        if patient:
-            patient["_id"] = str(patient["_id"])
-            return "success", patient
+        patients = patients_collection.find_one({"_id": ObjectId(patients_id)})
+        if patients:
+            patients["_id"] = str(patients["_id"])
+            return "success", patients
         return "notFound", None
     except Exception as e:
         return f"error: {str(e)}", None
 
-def WritePatient(patient_dict: dict):
+def Writepatients(patients_dict: dict):
     """Crea un nuevo paciente en la base de datos"""
     try:
         # Validar estructura FHIR del paciente
-        pat = Patient.model_validate(patient_dict)
-        validated_patient = pat.model_dump()
+        pat = patients.model_validate(patients_dict)
+        validated_patients = pat.model_dump()
         
         # Añadir metadatos adicionales
-        validated_patient["createdAt"] = datetime.now()
-        validated_patient["updatedAt"] = datetime.now()
+        validated_patients["createdAt"] = datetime.now()
+        validated_patients["updatedAt"] = datetime.now()
         
         # Insertar en MongoDB
-        result = patient_collection.insert_one(validated_patient)
+        result = patients_collection.insert_one(validated_patients)
         if result.inserted_id:
             return "success", str(result.inserted_id)
         return "errorInserting", None
     except Exception as e:
         return f"errorValidating: {str(e)}", None
 
-def GetPatientByIdentifier(patientSystem: str, patientValue: str):
+def GetpatientsByIdentifier(patientsSystem: str, patientsValue: str):
     """Busca un paciente por su identificador"""
     try:
-        patient = patient_collection.find_one({
+        patients = patients_collection.find_one({
             "identifier": {
                 "$elemMatch": {
-                    "system": patientSystem,
-                    "value": patientValue
+                    "system": patientsSystem,
+                    "value": patientsValue
                 }
             }
         })
-        if patient:
-            patient["_id"] = str(patient["_id"])
-            return "success", patient
+        if patients:
+            patients["_id"] = str(patients["_id"])
+            return "success", patients
         return "notFound", None
     except Exception as e:
         return f"error: {str(e)}", None
 
-def RegisterMedicationDispense(patient_id: str, medication_data: dict):
+def RegistermedicationsDispense(patients_id: str, medications_data: dict):
     """Registra un medicamento para un paciente"""
     try:
         # Verificar que el paciente existe
-        status, patient = GetPatientById(patient_id)
+        status, patients = GetpatientsById(patients_id)
         if status != "success":
-            return "patientNotFound", None
+            return "patientsNotFound", None
         
-        # Crear recurso FHIR MedicationDispense completo
+        # Crear recurso FHIR medicationsDispense completo
         dispense = {
-            "resourceType": "MedicationDispense",
+            "resourceType": "medicationsDispense",
             "status": "completed",
-            "medicationCodeableConcept": {
-                "text": medication_data.get("medication", "")
+            "medicationsCodeableConcept": {
+                "text": medications_data.get("medications", "")
             },
             "subject": {
-                "reference": f"Patient/{patient_id}",
-                "display": f"{patient['name'][0]['given'][0]} {patient['name'][0]['family']}"
+                "reference": f"patients/{patients_id}",
+                "display": f"{patients['name'][0]['given'][0]} {patients['name'][0]['family']}"
             },
             "whenHandedOver": datetime.now().isoformat(),
             "quantity": {
-                "value": float(medication_data.get("quantity", 1)),
-                "unit": medication_data.get("unit", "unit")
+                "value": float(medications_data.get("quantity", 1)),
+                "unit": medications_data.get("unit", "unit")
             },
             "daysSupply": {
-                "value": float(medication_data.get("daysSupply", 1)),
+                "value": float(medications_data.get("daysSupply", 1)),
                 "unit": "days"
             },
             "performer": [
                 {
                     "actor": {
-                        "display": medication_data.get("performer", "Unknown"),
+                        "display": medications_data.get("performer", "Unknown"),
                         "type": "Practitioner"
                     }
                 }
             ],
             "dosageInstruction": [
                 {
-                    "text": medication_data.get("dosage", "As prescribed"),
+                    "text": medications_data.get("dosage", "As prescribed"),
                     "timing": {
                         "repeat": {
                             "frequency": 1,
@@ -107,7 +107,7 @@ def RegisterMedicationDispense(patient_id: str, medication_data: dict):
             ],
             "note": [
                 {
-                    "text": medication_data.get("notes", "")
+                    "text": medications_data.get("notes", "")
                 }
             ],
             "createdAt": datetime.now(),
@@ -115,11 +115,11 @@ def RegisterMedicationDispense(patient_id: str, medication_data: dict):
         }
 
         # Validar estructura FHIR
-        md = MedicationDispense.model_validate(dispense)
+        md = medicationsDispense.model_validate(dispense)
         validated_dispense = md.model_dump()
         
         # Insertar en MongoDB
-        result = medication_collection.insert_one(validated_dispense)
+        result = medications_collection.insert_one(validated_dispense)
         if result.inserted_id:
             return "success", str(result.inserted_id)
         return "errorInserting", None
@@ -127,19 +127,19 @@ def RegisterMedicationDispense(patient_id: str, medication_data: dict):
     except Exception as e:
         return f"error: {str(e)}", None
 
-def GetPatientMedications(patient_id: str):
+def Getpatientsmedicationss(patients_id: str):
     """Obtiene todos los medicamentos de un paciente"""
     try:
         # Verificar que el paciente existe primero
-        status, _ = GetPatientById(patient_id)
+        status, _ = GetpatientsById(patients_id)
         if status != "success":
-            return "patientNotFound", None
+            return "patientsNotFound", None
             
-        medications = list(medication_collection.find({
-            "subject.reference": f"Patient/{patient_id}"
+        medicationss = list(medications_collection.find({
+            "subject.reference": f"patients/{patients_id}"
         }).sort("whenHandedOver", -1))  # Ordenar por fecha descendente
         
-        for med in medications:
+        for med in medicationss:
             med["_id"] = str(med["_id"])
             # Convertir fechas a string para respuesta JSON
             if "whenHandedOver" in med:
@@ -149,6 +149,6 @@ def GetPatientMedications(patient_id: str):
             if "updatedAt" in med:
                 med["updatedAt"] = med["updatedAt"].isoformat()
         
-        return "success", medications
+        return "success", medicationss
     except Exception as e:
         return f"error: {str(e)}", None
