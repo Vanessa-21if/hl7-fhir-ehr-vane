@@ -13,9 +13,18 @@ from connection import connect_to_mongodb
 
 class ClinicalRecordReader:
     """Sistema de lectura para historia clínica electrónica que cumple con la historia de usuario"""
+
+    def connect_to_mongo_db():
+    load_dotenv()
+    mongodb_uri = os.getenv('MONGO_URI')
+    client = MongoClient(mongodb_uri)
+    return client
+    MONGO_URI="mongodb+srv://21vanessaaa:VANEifmer2025@sampleinformationservic.ceivw.mongodb.net/?retryWrites=true&w=majority&appName=SampleInformationService"
+    API_PORT=8000
+    ALLOWED_ORIGINS="https://hl7-patient-write-vanessa.onrender.com,http://localhost:3000"
     
     def __init__(self):
-        """Inicializa la conexión a MongoDB"""
+        
         self.uri = os.getenv("MONGO_URI")
         self.db_name = os.getenv("DB_NAME", "SampleInformationtService")
         self.client = MongoClient(self.uri, server_api=ServerApi('1'))
