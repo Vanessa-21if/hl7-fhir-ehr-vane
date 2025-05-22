@@ -1,10 +1,20 @@
+import os
 from pymongo import MongoClient
-from pymongo.server_api import ServerApi
+from dotenv import load_dotenv
 
+load_dotenv()  # Carga variables del archivo .env
 
-def connect_to_mongodb(db_name, collection_name):
-    uri = "mongodb+srv://21vanessaaa:VANEifmer2025@sampleinformationservic.ceivw.mongodb.net/?retryWrites=true&w=majority&appName=SampleInformationService"
-    client = MongoClient(uri, server_api=ServerApi('1'))
-    db = client[db_name]
-    collection = db[collection_name]
-    return collection
+def get_db_connection():
+    """Establece conexión a la base de datos"""
+    client = MongoClient(os.getenv("MONGO_URI"))
+    db_name = os.getenv("MONGO_URI").split('/')[-1].split('?')[0]
+    return client[db_name]
+
+# Conexión a las colecciones
+def get_patients_collection():
+    db = get_db_connection()
+    return db["patients"]
+
+def get_medications_collection():
+    db = get_db_connection()
+    return db["medications"]
