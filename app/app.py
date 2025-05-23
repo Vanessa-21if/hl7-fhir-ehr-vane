@@ -10,12 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from typing import List
 from pydantic import BaseModel
+from fastapi import FastAPI
 
 app = FastAPI(
-
-    from fastapi import FastAPI
-
-app = FastAPI()
+   
 
 @app.get("/")
 
