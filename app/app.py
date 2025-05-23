@@ -17,6 +17,14 @@ app = FastAPI(
     docs_url="/docs"
 )
 
+@app.api_route("/", methods=["GET", "HEAD"])  # Soporta GET y HEAD
+def root():
+    return {
+        "status": "API funcionando",
+        "routes": ["/docs", "/patient", "/patient/{id}/medications"]
+    }
+
+
 # CORS para permitir acceso desde frontend
 app.add_middleware(
     CORSMiddleware,
