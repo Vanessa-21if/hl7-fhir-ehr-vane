@@ -41,6 +41,27 @@ class MedicationDispenseCreate(BaseModel):
     daysSupply: float
     dosage: str
 
+
+@app.post("/patient",
+          status_code=status.HTTP_201_CREATED,
+          summary="Registrar nuevo paciente mínimo")
+async def add_patient(patient_data: dict):
+    """
+    Registra un nuevo paciente con datos mínimos para dispensación
+    
+    Requiere:
+    - name (given, family)
+    - identifier (system, value)
+    """
+    status, patient_id = WritePatient(patient_data)
+    
+    if status == 'success':
+        return {"patient_id": patient_id}
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="Datos de paciente inválidos"
+    )
+    
 @app.get("/patient/{patient_id}", 
          summary="Obtener información básica de paciente",
          responses={
@@ -64,26 +85,6 @@ async def get_patient_by_id(patient_id: str):
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="Error al recuperar paciente"
-    )
-
-@app.post("/patient",
-          status_code=status.HTTP_201_CREATED,
-          summary="Registrar nuevo paciente mínimo")
-async def add_patient(patient_data: dict):
-    """
-    Registra un nuevo paciente con datos mínimos para dispensación
-    
-    Requiere:
-    - name (given, family)
-    - identifier (system, value)
-    """
-    status, patient_id = WritePatient(patient_data)
-    
-    if status == 'success':
-        return {"patient_id": patient_id}
-    raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        detail="Datos de paciente inválidos"
     )
 
 @app.post("/patient/{patient_id}/medications",
