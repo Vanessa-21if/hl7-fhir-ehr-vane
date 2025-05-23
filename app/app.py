@@ -49,9 +49,7 @@ async def add_patient(patient_data: dict = Body(...)):
 
     """
     Registra un nuevo paciente con datos mínimos para dispensación
-    
-    Requiere:
-    - name (given, family)
+
     - identifier (system, value)
     """
     status, patient_id = WritePatient(patient_data)
