@@ -5,7 +5,7 @@ from fhir.resources.medicationdispense import MedicationDispense
 from datetime import datetime
 
 # Conexión a colecciones
-patient_collection = connect_to_mongodb("SamplePatientService", "patients")
+patient_collection = connect_to_mongodb("SamplePatientService", "patient")
 medication_collection = connect_to_mongodb("SamplePatientService", "medications")
 
 def GetPatientById(patient_id: str):
