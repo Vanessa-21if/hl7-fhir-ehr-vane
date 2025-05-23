@@ -12,6 +12,23 @@ from typing import List
 from pydantic import BaseModel
 
 app = FastAPI(
+
+    from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+
+def root():
+    return {
+        "message": "API de Dispensación FHIR funcionando",
+        "routes": {
+            "documentación": "/docs",
+            "registrar_paciente": "/patient (POST)",
+            "registrar_medicamento": "/patient/{id}/medications (POST)"
+        }
+    }
+
     title="API de Dispensación de Medicamentos",
     description="API para gestión de dispensación de medicamentos en formato FHIR",
     version="1.0.0",
