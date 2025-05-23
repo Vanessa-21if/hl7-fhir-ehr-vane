@@ -12,13 +12,13 @@ from typing import List
 from pydantic import BaseModel
 from fastapi import FastAPI
 
-app = FastAPI()
+app = FastAPI( 
    
     title="API de Dispensación de Medicamentos",
     description="API para gestión de dispensación de medicamentos en formato FHIR",
     version="1.0.0",
     docs_url="/docs"
-
+)
 
 @app.get("/")
 def root():
