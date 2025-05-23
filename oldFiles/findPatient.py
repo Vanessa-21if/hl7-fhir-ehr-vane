@@ -1,65 +1,115 @@
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
 
-# Función para conectar a la base de datos MongoDB
-def connect_to_mongodb(uri, db_name, collection_name):
-    client = MongoClient(uri, server_api=ServerApi('1'))
-    db = client[db_name]
-    collection = db[collection_name]
-    return collection
-
-# Función para buscar pacientes por un identifier específico
-def find_patient_by_identifier(collection, identifier_type, identifier_value):
+def connect_to_mongodb(uri: str, db_name: str, collection_name: str):
+    """
+    Conexión básica a MongoDB para dispensación de medicamentos
+    
+    Args:
+        uri: Cadena de conexión MongoDB
+        db_name: Nombre de la base de datos
+        collection_name: Nombre de la colección
+    
+    Returns:
+        Objeto de colección MongoDB
+    """
     try:
-        # Consultar el documento que coincida con el identifier
-        query = {
-            "identifier": {
-                "$elemMatch": {
-                    "type": identifier_type,
-                    "value": identifier_value
-                }
-            }
-        }
-        patient = collection.find_one(query)
-        
-        # Retornar el paciente encontrado
-        return patient
+        client = MongoClient(uri, server_api=ServerApi('1'))
+        return client[db_name][collection_name]
     except Exception as e:
-        print(f"Error al buscar en MongoDB: {e}")
+        print(f"Error de conexión: {str(e)}")
+        raise
+
+def get_patient_minimal_data(collection, patient_id: str):
+    """
+    Obtiene datos mínimos del paciente necesarios para dispensación
+    
+    Args:
+        collection: Colección MongoDB
+        patient_id: ID del paciente
+    
+    Returns:
+        Dict con datos básicos del paciente o None si no se encuentra
+    """
+    try:
+        return collection.find_one(
+            {"_id": patient_id},
+            {  # Solo campos esenciales para dispensación
+                "name": 1, 
+                "identifier": 1
+            }
+        )
+    except Exception as e:
+        print(f"Error en búsqueda de paciente: {str(e)}")
         return None
 
-# Función para mostrar los datos de un paciente
-def display_patient(patient):
-    if patient:
-        print("Paciente encontrado:")
-        print(f"  ID: {patient.get('_id')}")
-        print(f"  Nombre: {patient.get('name', [{}])[0].get('given', [''])[0]} {patient.get('name', [{}])[0].get('family', '')}")
-        print(f"  Género: {patient.get('gender', 'Desconocido')}")
-        print(f"  Fecha de nacimiento: {patient.get('birthDate', 'Desconocida')}")
-        print("  Identificadores:")
-        for identifier in patient.get("identifier", []):
-            print(f"    Type: {identifier.get('type')}, Valor: {identifier.get('value')}")
-    else:
-        print("No se encontró ningún paciente con el identifier especificado.")
+def log_dispensed_medication(med_collection, patient_id: str, med_data: dict):
+    """
+    Registra una dispensación de medicamento
+    
+    Args:
+        med_collection: Colección de medicamentos
+        patient_id: ID del paciente
+        med_data: Datos del medicamento dispensado
+    
+    Returns:
+        ObjectId del registro creado o None en caso de error
+    """
+    try:
+        # Estructura mínima FHIR para dispensación
+        dispense_record = {
+            "resourceType": "MedicationDispense",
+            "status": "completed",
+            "medicationCodeableConcept": {
+                "text": med_data.get("medicationName")
+            },
+            "subject": {
+                "reference": f"Patient/{patient_id}"
+            },
+            "quantity": {
+                "value": med_data.get("quantity"),
+                "unit": "unidades"
+            },
+            "daysSupply": {
+                "value": med_data.get("daysSupply"),
+                "unit": "días"
+            },
+            "dosageInstruction": [{
+                "text": med_data.get("dosage")
+            }],
+            "timestamp": datetime.now()
+        }
+        
+        result = med_collection.insert_one(dispense_record)
+        return result.inserted_id
+    except Exception as e:
+        print(f"Error al registrar medicamento: {str(e)}")
+        return None
 
-# Ejemplo de uso
+# Ejemplo de uso simplificado
 if __name__ == "__main__":
-    # Cadena de conexión a MongoDB (reemplaza con tu propia cadena de conexión)
-    uri = "mongodb+srv://21vanessaaa:VANEifmer2025@sampleinformationservic.ceivw.mongodb.net/?retryWrites=true&w=majority&appName=SampleInformationService"
-
-    # Nombre de la base de datos y la colección
-    db_name = "SamplePatientService"
-    collection_name = "patients"
-
-    # Conectar a MongoDB
-    collection = connect_to_mongodb(uri, db_name, collection_name)
+    # Configuración de conexión
+    MONGODB_URI = "mongodb+srv://usuario:contraseña@cluster.mongodb.net/"
+    DB_NAME = "DispensacionMedicamentos"
     
-    # Identifier específico a buscar (reemplaza con los valores que desees)
-    identifier_type = "cc"
-    identifier_value = "1020713756"
-    
-    # Buscar el paciente por identifier
-    patient = find_patient_by_identifier(collection, identifier_type, identifier_value)
-    
-    # Mostrar los datos del paciente encontrado
-    display_patient(patient)
+    try:
+        # Conectar a colecciones
+        patients = connect_to_mongodb(MONGODB_URI, DB_NAME, "pacientes")
+        medications = connect_to_mongodb(MONGODB_URI, DB_NAME, "dispensaciones")
+        
+        # Ejemplo: Obtener datos básicos de paciente
+        patient = get_patient_minimal_data(patients, "507f1f77bcf86cd799439011")
+        
+        # Ejemplo: Registrar dispensación
+        if patient:
+            med_data = {
+                "medicationName": "Paracetamol 500mg",
+                "quantity": 30,
+                "daysSupply": 10,
+                "dosage": "1 tableta cada 8 horas"
+            }
+            med_id = log_dispensed_medication(medications, patient["_id"], med_data)
+            print(f"Medicamento dispensado con ID: {med_id}")
+            
+    except Exception as e:
+        print(f"Error en el sistema: {str(e)}")
