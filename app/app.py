@@ -20,17 +20,12 @@ app = FastAPI(
     docs_url="/docs"
 )
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])  # Soporta ambos métodos
 def root():
     return {
-        "message": "API de Dispensación FHIR funcionando",
-        "routes": {
-            "documentación": "/docs",
-            "registrar_paciente": "/patient (POST)",
-            "registrar_medicamento": "/patient/{id}/medications (POST)" 
-        }
+        "status": "API funcionando",
+        "routes": ["/docs", "/patient", "/patient/{id}/medications"]
     }
-
 # Configuración CORS básica
 app.add_middleware(
     CORSMiddleware,
@@ -149,9 +144,12 @@ async def get_patient_medications(patient_id: str):
     )
 
 if __name__ == '__main__':
+    import os
     uvicorn.run(
-        app,
+        "main:app",
         host="0.0.0.0",
-        port=8000
+        port=int(os.environ.get("PORT", 8000)),
+        workers=1
+        log_level="info"
     )
     
