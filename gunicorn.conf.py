@@ -5,7 +5,7 @@ workers = 4
 worker_class = "uvicorn.workers.UvicornWorker"
 
 # Dirección y puerto donde se ejecutará la aplicación
-bind = "0.0.0.0:8000"
+bind = "0.0.0.0:10000"
 
 # Tiempo de espera para las solicitudes (en segundos)
 timeout = 120
