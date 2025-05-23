@@ -1,155 +1,82 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Body
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import uvicorn
+
 from app.controlador.PatientCrud import (
-    GetPatientById,
     WritePatient,
     RegisterMedicationDispense,
+    GetPatientById,
     GetPatientMedications
 )
-from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
-from typing import List
-from pydantic import BaseModel
-from fastapi import FastAPI
-from fastapi import Body
 
-
-app = FastAPI( 
-   
+app = FastAPI(
     title="API de Dispensación de Medicamentos",
     description="API para gestión de dispensación de medicamentos en formato FHIR",
     version="1.0.0",
     docs_url="/docs"
 )
 
-@app.api_route("/", methods=["GET", "HEAD"])  # Soporta ambos métodos
-def root():
-    return {
-        "status": "API funcionando",
-        "routes": ["/docs", "/patient", "/patient/{id}/medications"]
-    }
-# Configuración CORS básica
+# CORS para permitir acceso desde frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://hl7-fhir-ehr-vane.onrender.com","https://hl7-patient-write-vanessa.onrender.com"],  #solo estos dominios
+    allow_origins=["https://hl7-fhir-ehr-vane.onrender.com", "https://hl7-patient-write-vanessa.onrender.com"],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
-# Modelo simplificado para dispensación de medicamentos
-class MedicationDispenseCreate(BaseModel):
-    medicationName: str
-    quantity: float
-    daysSupply: float
-    dosage: str
+@app.get("/")
+def root():
+    return {
+        "status": "API funcionando",
+        "routes": ["/docs", "/dispensation"]
+    }
 
+# ========== NUEVO MODELO UNIFICADO ==========
 
-@app.post("/patient")
-async def add_patient(patient_data: dict = Body(...)):
+class PatientData(BaseModel):
+    document: str
 
-    """
-    Registra un nuevo paciente con datos mínimos para dispensación
+class MedicationData(BaseModel):
+    nameMedicine: str
+    presentation: str
+    dose: str
+    amount: int
+    disgnosis: str
+    recipeDate: str
+    institution: str
+    observations: str
 
-    - identifier (system, value)
-    """
-    status, patient_id = WritePatient(patient_data)
-    
-    if status == 'success':
-        return {"patient_id": patient_id}
-    raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        detail="Datos de paciente inválidos"
-    )
-    
-@app.get("/patient/{patient_id}", 
-         summary="Obtener información básica de paciente",
-         responses={
-             404: {"description": "Paciente no encontrado"},
-             500: {"description": "Error interno del servidor"}
-         })
-async def get_patient_by_id(patient_id: str):
-    """
-    Obtiene información básica de un paciente necesaria para dispensación
-    
-    - **patient_id**: ID único del paciente en formato MongoDB ObjectId
-    """
-    status, patient = GetPatientById(patient_id)
-    if status == 'success':
-        return patient
-    elif status == 'notFound':
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Paciente no encontrado"
-        )
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Error al recuperar paciente"
-    )
+class DispensationRequest(BaseModel):
+    patient: PatientData
+    medication: MedicationData
 
-@app.post("/patient/{patient_id}/medications",
-          status_code=status.HTTP_201_CREATED,
-          summary="Registrar medicamento dispensado")
-async def add_medication_dispense(
-    patient_id: str,
-    medication: MedicationDispenseCreate
-):
-    """
-    Registra una dispensación de medicamento con datos esenciales
-    
-    - **patient_id**: ID del paciente
-    - **medicationName**: Nombre del medicamento
-    - **quantity**: Cantidad dispensada
-    - **daysSupply**: Días de tratamiento
-    - **dosage**: Instrucciones de dosificación
-    """
-    medication_data = medication.dict()
-    status, med_id = RegisterMedicationDispense(patient_id, medication_data)
-    
-    if status == 'success':
-        return {
-            "status": "success",
-            "medication_id": med_id,
-            "patient_id": patient_id
-        }
-    elif status == 'patientNotFound':
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
-        )
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Error al registrar medicamento"
-    )
+# ========== NUEVO ENDPOINT UNIFICADO ==========
 
-@app.get("/patient/{patient_id}/medications",
-         summary="Obtener historial de dispensaciones")
-async def get_patient_medications(patient_id: str):
+@app.post("/dispensation", summary="Registrar paciente + medicamento")
+async def register_dispensation(payload: DispensationRequest):
     """
-    Obtiene el historial de medicamentos dispensados a un paciente
-    
-    - **patient_id**: ID del paciente
+    Registra un paciente junto con la información del medicamento dispensado.
     """
-    status, medications = GetPatientMedications(patient_id)
-    
-    if status == 'success':
-        return medications
-    elif status == 'patientNotFound':
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Paciente no encontrado"
-        )
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Error al obtener medicamentos"
-    )
 
-if __name__ == '__main__':
-    import os
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 8000)),
-        workers=1,
-        log_level="info"
-    )
-    
+    # 1. Guardar paciente
+    patient_payload = {
+        "document": payload.patient.document
+    }
+    status_p, patient_id = WritePatient(patient_payload)
+
+    if status_p != "success":
+        raise HTTPException(status_code=422, detail="Error registrando paciente")
+
+    # 2. Guardar medicamento
+    medication_payload = payload.medication.dict()
+    status_m, medication_id = RegisterMedicationDispense(patient_id, medication_payload)
+
+    if status_m != "success":
+        raise HTTPException(status_code=500, detail="Error registrando medicamento")
+
+    return {
+        "status": "success",
+        "patient_id": patient_id,
+        "medication_id": medication_id
+    }
