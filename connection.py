@@ -6,5 +6,5 @@ def connect_to_mongodb(db_name, collection_name):
     uri = "mongodb+srv://21vanessaaa:VANEifmer2025@sampleinformationservic.ceivw.mongodb.net/?retryWrites=true&w=majority&appName=SampleInformationService"
     client = MongoClient(uri, server_api=ServerApi('1'))
     db = client[SamplePatientService]
-    collection = db[]
+    collection = db[medications]
     return collection
