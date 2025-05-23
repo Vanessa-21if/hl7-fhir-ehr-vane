@@ -21,7 +21,7 @@ app = FastAPI(
 # Configuración CORS básica
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar dominios permitidos
+    allow_origins=["https://hl7-fhir-ehr-vane.onrender.com","https://hl7-patient-write-vanessa.onrender.com"],  #solo estos dominios
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
