@@ -3,16 +3,18 @@ from bson import ObjectId
 from fhir.resources.patient import Patient
 from fhir.resources.medicationdispense import MedicationDispense
 from datetime import datetime
-import json
 
 # Conexión a colecciones
 patient_collection = connect_to_mongodb("SamplePatientService", "patients")
 medication_collection = connect_to_mongodb("SamplePatientService", "medications")
 
 def GetPatientById(patient_id: str):
-    """Obtiene un paciente por su ID"""
+    """Obtiene un paciente por su ID (versión simplificada)"""
     try:
-        patient = patient_collection.find_one({"_id": ObjectId(patient_id)})
+        patient = patient_collection.find_one(
+            {"_id": ObjectId(patient_id)},
+            {"name": 1, "identifier": 1}  # Solo campos esenciales
+        )
         if patient:
             patient["_id"] = str(patient["_id"])
             return "success", patient
@@ -21,15 +23,19 @@ def GetPatientById(patient_id: str):
         return f"error: {str(e)}", None
 
 def WritePatient(patient_dict: dict):
-    """Crea un nuevo paciente en la base de datos"""
+    """Crea un nuevo paciente con datos mínimos"""
     try:
-        # Validar estructura FHIR del paciente
+        # Validar estructura FHIR básica del paciente
+        required_fields = ["name", "identifier"]
+        for field in required_fields:
+            if field not in patient_dict:
+                return f"missingField: {field}", None
+        
         pat = Patient.model_validate(patient_dict)
         validated_patient = pat.model_dump()
         
-        # Añadir metadatos adicionales
+        # Solo metadatos esenciales
         validated_patient["createdAt"] = datetime.now()
-        validated_patient["updatedAt"] = datetime.now()
         
         # Insertar en MongoDB
         result = patient_collection.insert_one(validated_patient)
@@ -39,79 +45,44 @@ def WritePatient(patient_dict: dict):
     except Exception as e:
         return f"errorValidating: {str(e)}", None
 
-def GetPatientByIdentifier(patientSystem: str, patientValue: str):
-    """Busca un paciente por su identificador"""
-    try:
-        patient = patient_collection.find_one({
-            "identifier": {
-                "$elemMatch": {
-                    "system": patientSystem,
-                    "value": patientValue
-                }
-            }
-        })
-        if patient:
-            patient["_id"] = str(patient["_id"])
-            return "success", patient
-        return "notFound", None
-    except Exception as e:
-        return f"error: {str(e)}", None
-
 def RegisterMedicationDispense(patient_id: str, medication_data: dict):
-    """Registra un medicamento para un paciente"""
+    """Registra una dispensación de medicamento (versión simplificada)"""
     try:
-        # Verificar que el paciente existe
+        # Verificación básica del paciente
         status, patient = GetPatientById(patient_id)
         if status != "success":
             return "patientNotFound", None
         
-        # Crear recurso FHIR MedicationDispense completo
+        # Validar campos requeridos
+        required_fields = ["medicationName", "quantity", "daysSupply", "dosage"]
+        for field in required_fields:
+            if field not in medication_data:
+                return f"missingField: {field}", None
+
+        # Crear recurso FHIR MedicationDispense mínimo
         dispense = {
             "resourceType": "MedicationDispense",
             "status": "completed",
             "medicationCodeableConcept": {
-                "text": medication_data.get("medication", "")
+                "text": medication_data["medicationName"]
             },
             "subject": {
-                "reference": f"Patient/{patient_id}",
-                "display": f"{patient['name'][0]['given'][0]} {patient['name'][0]['family']}"
+                "reference": f"Patient/{patient_id}"
             },
-            "whenHandedOver": datetime.now().isoformat(),
             "quantity": {
-                "value": float(medication_data.get("quantity", 1)),
-                "unit": medication_data.get("unit", "unit")
+                "value": float(medication_data["quantity"]),
+                "unit": "unidades"
             },
             "daysSupply": {
-                "value": float(medication_data.get("daysSupply", 1)),
-                "unit": "days"
+                "value": float(medication_data["daysSupply"]),
+                "unit": "días"
             },
-            "performer": [
-                {
-                    "actor": {
-                        "display": medication_data.get("performer", "Unknown"),
-                        "type": "Practitioner"
-                    }
-                }
-            ],
             "dosageInstruction": [
                 {
-                    "text": medication_data.get("dosage", "As prescribed"),
-                    "timing": {
-                        "repeat": {
-                            "frequency": 1,
-                            "period": 1,
-                            "periodUnit": "d"
-                        }
-                    }
+                    "text": medication_data["dosage"]
                 }
             ],
-            "note": [
-                {
-                    "text": medication_data.get("notes", "")
-                }
-            ],
-            "createdAt": datetime.now(),
-            "updatedAt": datetime.now()
+            "createdAt": datetime.now()
         }
 
         # Validar estructura FHIR
@@ -128,26 +99,23 @@ def RegisterMedicationDispense(patient_id: str, medication_data: dict):
         return f"error: {str(e)}", None
 
 def GetPatientMedications(patient_id: str):
-    """Obtiene todos los medicamentos de un paciente"""
+    """Obtiene medicamentos dispensados a un paciente (versión simplificada)"""
     try:
-        # Verificar que el paciente existe primero
-        status, _ = GetPatientById(patient_id)
-        if status != "success":
-            return "patientNotFound", None
-            
-        medications = list(medication_collection.find({
-            "subject.reference": f"Patient/{patient_id}"
-        }).sort("whenHandedOver", -1))  # Ordenar por fecha descendente
+        medications = list(medication_collection.find(
+            {"subject.reference": f"Patient/{patient_id}"},
+            {  # Solo campos esenciales
+                "medicationCodeableConcept.text": 1,
+                "quantity": 1,
+                "daysSupply": 1,
+                "dosageInstruction": 1,
+                "createdAt": 1
+            }
+        ).sort("createdAt", -1))  # Ordenar por fecha descendente
         
         for med in medications:
             med["_id"] = str(med["_id"])
-            # Convertir fechas a string para respuesta JSON
-            if "whenHandedOver" in med:
-                med["whenHandedOver"] = med["whenHandedOver"].isoformat()
             if "createdAt" in med:
                 med["createdAt"] = med["createdAt"].isoformat()
-            if "updatedAt" in med:
-                med["updatedAt"] = med["updatedAt"].isoformat()
         
         return "success", medications
     except Exception as e:
