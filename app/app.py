@@ -11,6 +11,8 @@ from datetime import datetime
 from typing import List
 from pydantic import BaseModel
 from fastapi import FastAPI
+from fastapi import Body
+
 
 app = FastAPI( 
    
@@ -42,10 +44,9 @@ class MedicationDispenseCreate(BaseModel):
     dosage: str
 
 
-@app.post("/patient",
-          status_code=status.HTTP_201_CREATED,
-          summary="Registrar nuevo paciente mínimo")
-async def add_patient(patient_data: dict):
+@app.post("/patient")
+async def add_patient(patient_data: dict = Body(...)):
+
     """
     Registra un nuevo paciente con datos mínimos para dispensación
     
