@@ -79,8 +79,8 @@ if __name__ == "__main__":
     minimal_patient = create_minimal_patient(
         identifier_system="http://cedula",
         identifier_value="1020713756",
-        given_name="Mario",
-        family_name="Duarte"
+        given_name="Vanessa",
+        family_name="Almonacid"
     )
     print("Paciente mínimo FHIR:")
     print(json.dumps(minimal_patient, indent=2))
