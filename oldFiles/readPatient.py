@@ -98,8 +98,7 @@ def register_medication_dispense(
 if __name__ == '__main__':
     # Configuración - Debería venir de variables de entorno en producción
     CONFIG = {
-        'MONGODB_URI': 'mongodb+srv://21vanessaaa:VANEifmer2025@sampleinformationservic.ceivw.mongodb.net/?retryWrites=true&w=majority&appName=SampleInformationService"
-',
+        'MONGODB_URI': 'mongodb+srv://21vanessaaa:VANEifmer2025@sampleinformationservic.ceivw.mongodb.net/?retryWrites=true&w=majority&appName=SampleInformationService',
         'DB_NAME': 'SamplePatientService'
     }
     
