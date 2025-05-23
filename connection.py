@@ -4,12 +4,6 @@ from dotenv import load_dotenv
 
 load_dotenv()  # Carga variables del archivo .env
 
-def connect_to_mongo_db():
-    load_dotenv()
-    mongodb_uri = os.getenv('MONGO_URI')
-    client = MongoClient(mongodb_uri)
-    return client
-   
 def get_db_connection():
     """Establece conexión a la base de datos"""
     client = MongoClient(os.getenv("MONGO_URI"))
