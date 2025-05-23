@@ -1,19 +1,17 @@
 from connection import connect_to_mongodb
 from bson import ObjectId
-from fhir.resources.patient import Patient
-from fhir.resources.medicationdispense import MedicationDispense
 from datetime import datetime
 
-# Conexión a colecciones
+# Conexión a colecciones MongoDB
 patient_collection = connect_to_mongodb("SamplePatientService", "patient")
 medication_collection = connect_to_mongodb("SamplePatientService", "medications")
 
 def GetPatientById(patient_id: str):
-    """Obtiene un paciente por su ID (versión simplificada)"""
+    """Obtiene un paciente por su ID (simplificado)."""
     try:
         patient = patient_collection.find_one(
             {"_id": ObjectId(patient_id)},
-            {"name": 1, "identifier": 1}  # Solo campos esenciales
+            {"document": 1}  # Solo documento (ID del paciente)
         )
         if patient:
             patient["_id"] = str(patient["_id"])
@@ -22,45 +20,53 @@ def GetPatientById(patient_id: str):
     except Exception as e:
         return f"error: {str(e)}", None
 
-def WritePatient(patient_dict: dict):
-    """Crea un nuevo paciente con datos mínimos"""
+def WritePatient(patient_data: dict):
+    """
+    Crea un nuevo paciente con datos mínimos (documento).
+    Se espera patient_data = {"document": "número_documento"}
+    """
     try:
-        # Validar estructura FHIR básica del paciente
-        required_fields = ["name", "identifier"]
-        for field in required_fields:
-            if field not in patient_dict:
-                return f"missingField: {field}", None
+        document = patient_data.get("document")
+        if not document:
+            return "missingField: document", None
         
-        pat = Patient.model_validate(patient_dict)
-        validated_patient = pat.model_dump()
+        # Verificar si ya existe paciente con ese documento
+        existing = patient_collection.find_one({"document": document})
+        if existing:
+            return "success", str(existing["_id"])
         
-        # Solo metadatos esenciales
-        validated_patient["createdAt"] = datetime.now()
-        
-        # Insertar en MongoDB
-        result = patient_collection.insert_one(validated_patient)
+        new_patient = {
+            "document": document,
+            "createdAt": datetime.now()
+        }
+        result = patient_collection.insert_one(new_patient)
         if result.inserted_id:
             return "success", str(result.inserted_id)
         return "errorInserting", None
     except Exception as e:
-        return f"errorValidating: {str(e)}", None
+        return f"error: {str(e)}", None
 
 def RegisterMedicationDispense(patient_id: str, medication_data: dict):
-    """Registra una dispensación de medicamento (versión simplificada)"""
+    """
+    Registra una dispensación de medicamento para un paciente.
+    medication_data debe contener:
+      - medicationName
+      - quantity
+      - daysSupply
+      - dosage
+    """
     try:
-        # Verificación básica del paciente
+        # Verificar paciente existe
         status, patient = GetPatientById(patient_id)
         if status != "success":
             return "patientNotFound", None
         
         # Validar campos requeridos
-        required_fields = ["medicationName", "quantity", "daysSupply", "dosage"]
-        for field in required_fields:
+        for field in ["medicationName", "quantity", "daysSupply", "dosage"]:
             if field not in medication_data:
                 return f"missingField: {field}", None
-
-        # Crear recurso FHIR MedicationDispense mínimo
-        dispense = {
+        
+        dispense_record = {
             "resourceType": "MedicationDispense",
             "status": "completed",
             "medicationCodeableConcept": {
@@ -78,44 +84,38 @@ def RegisterMedicationDispense(patient_id: str, medication_data: dict):
                 "unit": "días"
             },
             "dosageInstruction": [
-                {
-                    "text": medication_data["dosage"]
-                }
+                {"text": medication_data["dosage"]}
             ],
             "createdAt": datetime.now()
         }
-
-        # Validar estructura FHIR
-        md = MedicationDispense.model_validate(dispense)
-        validated_dispense = md.model_dump()
         
-        # Insertar en MongoDB
-        result = medication_collection.insert_one(validated_dispense)
+        result = medication_collection.insert_one(dispense_record)
         if result.inserted_id:
             return "success", str(result.inserted_id)
         return "errorInserting", None
-        
     except Exception as e:
         return f"error: {str(e)}", None
 
 def GetPatientMedications(patient_id: str):
-    """Obtiene medicamentos dispensados a un paciente (versión simplificada)"""
+    """Obtiene historial de medicamentos dispensados a un paciente."""
     try:
-        medications = list(medication_collection.find(
+        meds_cursor = medication_collection.find(
             {"subject.reference": f"Patient/{patient_id}"},
-            {  # Solo campos esenciales
+            {
                 "medicationCodeableConcept.text": 1,
                 "quantity": 1,
                 "daysSupply": 1,
                 "dosageInstruction": 1,
                 "createdAt": 1
             }
-        ).sort("createdAt", -1))  # Ordenar por fecha descendente
+        ).sort("createdAt", -1)
         
-        for med in medications:
+        medications = []
+        for med in meds_cursor:
             med["_id"] = str(med["_id"])
-            if "createdAt" in med:
+            if "createdAt" in med and med["createdAt"]:
                 med["createdAt"] = med["createdAt"].isoformat()
+            medications.append(med)
         
         return "success", medications
     except Exception as e:
