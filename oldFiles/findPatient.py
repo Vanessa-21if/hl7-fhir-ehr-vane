@@ -1,14 +1,16 @@
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
+from bson import ObjectId
+from datetime import datetime
 
-def connect_to_mongodb(uri: str, db_name: str, collection_name: str):
+def connect_to_mongodb(db_name: str, collection_name: str, uri: str):
     """
     Conexión básica a MongoDB para dispensación de medicamentos
-    
+
     Args:
-        uri: Cadena de conexión MongoDB
         db_name: Nombre de la base de datos
         collection_name: Nombre de la colección
+        uri: Cadena de conexión MongoDB
     
     Returns:
         Objeto de colección MongoDB
@@ -32,13 +34,16 @@ def get_patient_minimal_data(collection, patient_id: str):
         Dict con datos básicos del paciente o None si no se encuentra
     """
     try:
-        return collection.find_one(
-            {"_id": patient_id},
+        patient = collection.find_one(
+            {"_id": ObjectId(patient_id)},
             {  # Solo campos esenciales para dispensación
-                "name": 1, 
+                "name": 1,
                 "identifier": 1
             }
         )
+        if patient:
+            patient["_id"] = str(patient["_id"])
+        return patient
     except Exception as e:
         print(f"Error en búsqueda de paciente: {str(e)}")
         return None
@@ -53,10 +58,9 @@ def log_dispensed_medication(med_collection, patient_id: str, med_data: dict):
         med_data: Datos del medicamento dispensado
     
     Returns:
-        ObjectId del registro creado o None en caso de error
+        String con ObjectId del registro creado o None en caso de error
     """
     try:
-        # Estructura mínima FHIR para dispensación
         dispense_record = {
             "resourceType": "MedicationDispense",
             "status": "completed",
@@ -67,38 +71,43 @@ def log_dispensed_medication(med_collection, patient_id: str, med_data: dict):
                 "reference": f"Patient/{patient_id}"
             },
             "quantity": {
-                "value": med_data.get("quantity"),
+                "value": float(med_data.get("quantity")),
                 "unit": "unidades"
             },
             "daysSupply": {
-                "value": med_data.get("daysSupply"),
+                "value": float(med_data.get("daysSupply")),
                 "unit": "días"
             },
             "dosageInstruction": [{
                 "text": med_data.get("dosage")
             }],
-            "timestamp": datetime.now()
+            "createdAt": datetime.now()
         }
         
         result = med_collection.insert_one(dispense_record)
-        return result.inserted_id
+        if result.inserted_id:
+            return str(result.inserted_id)
+        return None
     except Exception as e:
         print(f"Error al registrar medicamento: {str(e)}")
         return None
 
+
 # Ejemplo de uso simplificado
 if __name__ == "__main__":
-    # Configuración de conexión
-    MONGODB_URI = "mongodb+srv://usuario:contraseña@cluster.mongodb.net/"
-    DB_NAME = "DispensacionMedicamentos"
+    import os
+
+    # Configuración de conexión desde variable de entorno o fija
+    MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://usuario:contraseña@cluster.mongodb.net/")
+    DB_NAME = "SamplePatientService"  # Para coincidir con patientcrud.py
     
     try:
-        # Conectar a colecciones
-        patients = connect_to_mongodb(MONGODB_URI, DB_NAME, "pacientes")
-        medications = connect_to_mongodb(MONGODB_URI, DB_NAME, "dispensaciones")
+        patients = connect_to_mongodb(DB_NAME, "patient", MONGODB_URI)
+        medications = connect_to_mongodb(DB_NAME, "medications", MONGODB_URI)
         
         # Ejemplo: Obtener datos básicos de paciente
-        patient = get_patient_minimal_data(patients, "507f1f77bcf86cd799439011")
+        patient_id = "507f1f77bcf86cd799439011"  # Cambia por uno real
+        patient = get_patient_minimal_data(patients, patient_id)
         
         # Ejemplo: Registrar dispensación
         if patient:
@@ -108,8 +117,10 @@ if __name__ == "__main__":
                 "daysSupply": 10,
                 "dosage": "1 tableta cada 8 horas"
             }
-            med_id = log_dispensed_medication(medications, patient["_id"], med_data)
+            med_id = log_dispensed_medication(medications, patient_id, med_data)
             print(f"Medicamento dispensado con ID: {med_id}")
+        else:
+            print("Paciente no encontrado")
             
     except Exception as e:
         print(f"Error en el sistema: {str(e)}")
