@@ -3,8 +3,9 @@ from fhir.resources.medicationdispense import MedicationDispense
 import json
 from datetime import datetime
 
+
 def create_minimal_patient(identifier_system: str, identifier_value: str, 
-                         given_name: str, family_name: str) -> dict:
+                           given_name: str, family_name: str) -> dict:
     """
     Crea un recurso Patient FHIR con datos mínimos para dispensación
     
@@ -32,11 +33,12 @@ def create_minimal_patient(identifier_system: str, identifier_value: str,
     # Validar con modelo FHIR
     return Patient.model_validate(patient_data).model_dump()
 
+
 def create_medication_dispense(patient_id: str, medication_name: str, 
-                             quantity: float, days_supply: float, 
-                             dosage: str) -> dict:
+                               quantity: float, days_supply: float, 
+                               dosage: str) -> dict:
     """
-    Crea un recurso MedicationDispense FHIR para dispensación
+    Crea un recurso MedicationDispense FHIR sincronizado con backend
     
     Args:
         patient_id: ID del paciente
@@ -46,7 +48,7 @@ def create_medication_dispense(patient_id: str, medication_name: str,
         dosage: Instrucciones de dosificación
     
     Returns:
-        Diccionario con recurso MedicationDispense FHIR validado
+        Diccionario con recurso MedicationDispense FHIR validado y sincronizado
     """
     dispense_data = {
         "resourceType": "MedicationDispense",
@@ -58,21 +60,26 @@ def create_medication_dispense(patient_id: str, medication_name: str,
             "reference": f"Patient/{patient_id}"
         },
         "quantity": {
-            "value": quantity,
+            "value": float(quantity),
             "unit": "unidades"
         },
         "daysSupply": {
-            "value": days_supply,
+            "value": float(days_supply),
             "unit": "días"
         },
         "dosageInstruction": [{
             "text": dosage
         }],
-        "whenHandedOver": datetime.now().isoformat()
+        # Fecha estandarizada usada en tu backend
+        "extension": [{
+            "url": "http://hl7.org/fhir/StructureDefinition/createdAt",
+            "valueDateTime": datetime.now().isoformat()
+        }]
     }
-    
+
     # Validar con modelo FHIR
     return MedicationDispense.model_validate(dispense_data).model_dump()
+
 
 if __name__ == "__main__":
     # Ejemplo 1: Crear paciente mínimo
