@@ -12,3 +12,7 @@ timeout = 120
 
 # Nivel de log (debug, info, warning, error, critical)
 loglevel = "info"
+
+accesslog = "-"
+
+errorlog = "-"
