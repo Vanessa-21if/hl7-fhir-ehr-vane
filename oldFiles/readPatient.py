@@ -104,7 +104,7 @@ if __name__ == '__main__':
     
     # Configuración - idealmente de variables de entorno en producción
     CONFIG = {
-        'MONGODB_URI': os.getenv('MONGODB_URI', 'mongodb+srv://usuario:contraseña@cluster.mongodb.net/'),
+        'MONGODB_URI': os.getenv('MONGODB_URI', 'mongodb+srv://21vanessaaa:VANEifmer2025@sampleinformationservic.ceivw.mongodb.net/?retryWrites=true&w=majority&appName=SampleInformationService'),
         'DB_NAME': 'SamplePatientService'
     }
     
