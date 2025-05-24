@@ -58,6 +58,13 @@ class MedicationData(BaseModel):
 class DispensationRequest(BaseModel):
     patient: PatientData
     medication: MedicationData
+    
+class DispenseInput(BaseModel):
+    patient_id: str
+    medication_name: str
+    quantity: float
+    days_supply: float
+    dosage: str
 
 # ========== NUEVO ENDPOINT UNIFICADO ==========
 
