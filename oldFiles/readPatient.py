@@ -1,7 +1,8 @@
 from pymongo import MongoClient
 from pymongo.server_api import ServerApi
+from bson import ObjectId
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 def connect_to_mongodb(uri: str, db_name: str) -> Dict[str, MongoClient]:
     """
@@ -18,8 +19,8 @@ def connect_to_mongodb(uri: str, db_name: str) -> Dict[str, MongoClient]:
         client = MongoClient(uri, server_api=ServerApi('1'))
         db = client[db_name]
         return {
-            'patients': db['pacientes'],
-            'medications': db['dispensaciones']
+            'patients': db['patient'],
+            'medications': db['medications']
         }
     except Exception as e:
         raise ConnectionError(f"Error de conexión a MongoDB: {str(e)}")
@@ -36,10 +37,13 @@ def get_patient_for_dispensing(collections: Dict, patient_id: str) -> Optional[D
         Datos básicos del paciente o None si no se encuentra
     """
     try:
-        return collections['patients'].find_one(
-            {'_id': patient_id},
+        patient = collections['patients'].find_one(
+            {'_id': ObjectId(patient_id)},
             {'name': 1, 'identifier': 1}  # Solo campos esenciales
         )
+        if patient:
+            patient['_id'] = str(patient['_id'])
+        return patient
     except Exception as e:
         print(f"Error al buscar paciente: {str(e)}")
         return None
@@ -86,7 +90,7 @@ def register_medication_dispense(
             'dosageInstruction': [{
                 'text': medication_data['dosage']
             }],
-            'timestamp': datetime.now()
+            'createdAt': datetime.now()
         }
         
         result = collections['medications'].insert_one(dispense_record)
@@ -96,9 +100,11 @@ def register_medication_dispense(
         return None
 
 if __name__ == '__main__':
-    # Configuración - Debería venir de variables de entorno en producción
+    import os
+    
+    # Configuración - idealmente de variables de entorno en producción
     CONFIG = {
-        'MONGODB_URI': 'mongodb+srv://21vanessaaa:VANEifmer2025@sampleinformationservic.ceivw.mongodb.net/?retryWrites=true&w=majority&appName=SampleInformationService',
+        'MONGODB_URI': os.getenv('MONGODB_URI', 'mongodb+srv://usuario:contraseña@cluster.mongodb.net/'),
         'DB_NAME': 'SamplePatientService'
     }
     
@@ -107,7 +113,8 @@ if __name__ == '__main__':
         collections = connect_to_mongodb(CONFIG['MONGODB_URI'], CONFIG['DB_NAME'])
         
         # 2. Ejemplo: Obtener paciente (simulado)
-        patient_id = '507f1f77bcf86cd799439011'  # En un sistema real vendría del request
+        patient_id = '507f1f77bcf86cd799439011'  # Ejemplo, usar uno válido
+        
         patient = get_patient_for_dispensing(collections, patient_id)
         
         if patient:
