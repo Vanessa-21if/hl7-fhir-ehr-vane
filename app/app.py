@@ -43,7 +43,7 @@ class MedicationData(BaseModel):
     presentation: str
     dose: str
     amount: int
-    disgnosis: str
+    diagnosis: str
     recipeDate: str
     institution: str
     observations: str
