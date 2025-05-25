@@ -78,6 +78,7 @@ async def register_dispensation(payload: DispensationRequest):
 
     # 2. Guardar medicamento
     medication_payload = payload.medication.dict()
+    print("medication_payload:", medication_payload)
     status_m, medication_id = RegisterMedicationDispense(patient_id, medication_payload)
 
     if status_m != "success":
