@@ -33,14 +33,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-def root():
-    return {
-        "status": "API funcionando",
-        "routes": ["/docs", "/dispensation"]
-    }
 
-# ========== NUEVO MODELO UNIFICADO ==========
 
 class PatientData(BaseModel):
     document: str
