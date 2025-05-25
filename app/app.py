@@ -68,7 +68,7 @@ class DispenseInput(BaseModel):
 
 # ========== NUEVO ENDPOINT UNIFICADO ==========
 
-@app.post("/dispensation", summary="Registrar paciente + medicamento")
+@app.post("/medications", summary="Registrar paciente + medicamento")
 async def register_dispensation(payload: DispensationRequest):
     """
     Registra un paciente junto con la información del medicamento dispensado.
